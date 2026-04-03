@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import personService from './services/persons'
 
-const Filter = ({ filterName, filterByName }) => {
+function Filter({ filterName, filterByName }) {
   return (
     <div>
       filter by name:
@@ -13,12 +13,12 @@ const Filter = ({ filterName, filterByName }) => {
   )
 }
 
-const PersonForm = ({
+function PersonForm({
   addPerson,
   newName,
   handleNameChange,
   newNumber,
-  handleNumberChange }) => {
+  handleNumberChange }) {
   return (
     <div>
       <form onSubmit={addPerson}>
@@ -43,8 +43,7 @@ const PersonForm = ({
     </div>
   )
 }
-
-const Persons = ({ persons, filterName }) => {
+function Persons({ persons, filterName, deletePerson }) {
   return (
     <div>
       {persons
@@ -53,7 +52,7 @@ const Persons = ({ persons, filterName }) => {
         )
         .map(person =>
           <div key={person.id}>
-            {person.name} {person.number}
+            {person.name} {person.number} <button onClick={() => { deletePerson(person.id) }}>Delete</button>
           </div>
         )
       }
@@ -61,7 +60,7 @@ const Persons = ({ persons, filterName }) => {
   )
 }
 
-const App = () => {
+function App() {
   const [persons, setPersons] = useState([])
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
@@ -76,18 +75,47 @@ const App = () => {
 
   const addPerson = (event) => {
     event.preventDefault()
-    if (persons.some(person => person.name === newName))
-      alert("User already exists")
+    const foundPerson = persons.find(person => person.name === newName)
+    if (foundPerson) {
+      if (confirm(newName + " is already added, do you want to update the number?")) {
+        const updatedPerson = {
+          name: foundPerson.name,
+          number: newNumber,
+          id: foundPerson.id,
+        }
+        personService
+          .update(foundPerson.id, updatedPerson)
+          .then(returnedPerson => {
+            setPersons(persons.map(person =>
+              person.id !== foundPerson.id ? person : returnedPerson
+            ))
+            console.log("Person updated");
+          })
+          .catch(error => {
+            console.log("Error while updating Person: ", error);
+          })
+      }
+    }
     else {
-      const nameObject = {
+      const newPerson = {
         name: newName,
         number: newNumber,
         id: String(persons.length + 1),
       }
       personService
-        .create(nameObject)
+        .create(newPerson)
         .then(returnedPerson => { setPersons(persons.concat(returnedPerson)), console.log("Person added") })
         .catch(error => { console.log("Error adding Person: ", error) })
+    }
+  }
+
+  function deletePerson(id) {
+    const person = persons.find(p => p.id === id)
+    if (confirm("Do you want to delete " + person.name)) {
+      personService
+        .deleting(id)
+        .then(setPersons(persons.filter(person => person.id !== id)))
+        .catch(error => { console.log("Error while deleting Person", error) })
     }
   }
 
@@ -119,7 +147,7 @@ const App = () => {
       />
 
       <h2>Numbers</h2>
-      <Persons persons={persons} filterName={filterName} />
+      <Persons persons={persons} filterName={filterName} deletePerson={deletePerson} />
     </div>
   )
 }
