@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import personService from './services/persons'
+import Notification from './components/Notification'
+import './index.css'
 
 function Filter({ filterName, filterByName }) {
   return (
@@ -65,12 +67,16 @@ function App() {
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [filterName, setFilterName] = useState("")
+  const [notification, setNotification] = useState(null)
 
   useEffect(() => {
     personService
       .getAll()
       .then(initalPersons => { setPersons(initalPersons), console.log("Got Data") })
-      .catch(error => { console.log("Error getting all: ", error) })
+      .catch(error => {
+        console.log("Error getting all: ", error),
+          setNotification("Error while getting data")
+      })
   }, [])
 
   const addPerson = (event) => {
@@ -89,10 +95,13 @@ function App() {
             setPersons(persons.map(person =>
               person.id !== foundPerson.id ? person : returnedPerson
             ))
-            console.log("Person updated");
+            setNotification("Successfully updated " + foundPerson.name)
+            timeout(5000)
           })
           .catch(error => {
-            console.log("Error while updating Person: ", error);
+            console.log("Error while updating Person: ", error,
+              setNotification("Error while updating Person"))
+            timeout(5000)
           })
       }
     }
@@ -104,8 +113,16 @@ function App() {
       }
       personService
         .create(newPerson)
-        .then(returnedPerson => { setPersons(persons.concat(returnedPerson)), console.log("Person added") })
-        .catch(error => { console.log("Error adding Person: ", error) })
+        .then(returnedPerson => {
+          setPersons(persons.concat(returnedPerson)),
+            setNotification("Successfully created " + newPerson.name)
+          timeout(5000)
+        })
+        .catch(error => {
+          console.log("Error adding Person: ", error),
+            setNotification("Error while creating Person")
+          timeout(5000)
+        })
     }
   }
 
@@ -114,9 +131,22 @@ function App() {
     if (confirm("Do you want to delete " + person.name)) {
       personService
         .deleting(id)
-        .then(setPersons(persons.filter(person => person.id !== id)))
-        .catch(error => { console.log("Error while deleting Person", error) })
+        .then(setPersons(persons.filter(person => person.id !== id),
+          setNotification("Successfully deleted " + person.name),
+          timeout(5000)))
+        .catch(error => {
+          console.log("Error while deleting Person", error),
+            setNotification("Error while updating Person")
+          timeout(5000)
+        })
+
     }
+  }
+
+  function timeout(howLong) {
+    setTimeout(() => {
+      setNotification(null)
+    }, howLong)
   }
 
   const handleNameChange = (event) => {
@@ -133,7 +163,8 @@ function App() {
 
   return (
     <div>
-      <h2>Phonebook</h2>
+      <h1>Phonebook</h1>
+      <Notification message={notification} />
       <Filter filterName={filterName} filterByName={filterByName} />
 
       <h2>add a new</h2>
